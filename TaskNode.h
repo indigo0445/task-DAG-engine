@@ -1,17 +1,17 @@
 #pragma once
 #include <functional>
-#include <vector>
+#include <unordered_set>
 #include <ranges>
 #include <iostream>
 #include <memory>
 #include <atomic>
-#include <initializer_list>
+#include <vector>
 
 struct TaskNode {
     // operate entirely on internal obj states
     std::function<void()> task;
     std::atomic<int> pending_deps{0};
-    std::vector<TaskNode*> successors; // immediate children
+    std::unordered_set<TaskNode*> successors; // immediate children
     
     template <typename Callable>
     TaskNode (Callable&& c): task(std::forward<Callable>(c)) {}
@@ -23,16 +23,44 @@ struct TaskNode {
         }
 
     template <typename Callable>
-    TaskNode (Callable&& c, std::initializer_list<std::reference_wrapper<TaskNode>> deps)
+    TaskNode (Callable&& c, std::vector<std::reference_wrapper<TaskNode>> deps)
         : task(std::forward<Callable>(c)) {
             for (TaskNode& dep : deps) {
                 dep.directs_to(*this);
             }
         }
 
-    int directs_to(TaskNode &succ) {
-        successors.push_back(&succ);
+    void directs_to(TaskNode& succ) {
+        // if already directed, do nothing (could consider throwing an error?)
+        if (successors.contains(&succ)) {
+            return;
+        }
+        successors.insert(&succ);
         succ.pending_deps++;
-        return successors.size();
+    }
+
+    void directs_to(std::vector<std::reference_wrapper<TaskNode>> succs) {
+        std::for_each(succs.begin(), succs.end(), [this](auto& succ){ return directs_to(succ); });
+    }
+
+    void del_successors(TaskNode& succ) {
+        // if not directed, do nothing (could consider throwing an error?)
+        if (!successors.contains(&succ)) {
+            return;
+        }
+        successors.erase(&succ);
+        succ.pending_deps--;
+    }
+
+    void del_successors(std::vector<std::reference_wrapper<TaskNode>> succs) {
+        std::for_each(succs.begin(), succs.end(), [this](auto& succ){ return del_successors(succ); });
+    }
+
+    void del_deps(TaskNode& deps) {
+        deps.del_successors(*this);
+    }
+
+    void del_deps(std::vector<std::reference_wrapper<TaskNode>> deps) {
+        std::for_each(deps.begin(), deps.end(), [this](auto& dep){ return del_deps(dep); });
     }
 };

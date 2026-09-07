@@ -89,6 +89,7 @@ public:
     }
 
     void stop_workers() {
+        // does not interrupt if thread is working; I don't think C++ can interrupt a working thread?
         stopping = true;
         for (int i = 0; i < num_threads; i++) {
             new_task.release();
