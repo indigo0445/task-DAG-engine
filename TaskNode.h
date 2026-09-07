@@ -15,9 +15,9 @@ struct TaskNode {
     template <typename Callable>
     TaskNode (Callable&& c): task(std::forward<Callable>(c)) {}
 
-    int directs_to(TaskNode* succ) {
-        successors.push_back(succ);
-        succ->pending_deps++;
+    int directs_to(TaskNode &succ) {
+        successors.push_back(&succ);
+        succ.pending_deps++;
         return successors.size();
     }
 };
