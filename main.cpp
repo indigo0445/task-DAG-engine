@@ -43,7 +43,7 @@ int main() {
     }, {n2, n3});
 
     ThreadPoolExe exe;
-    exe.compute_DAG({&n1});
+    exe.compute_DAG({n1});
     exe.wait();
 
     exe.stop_workers();

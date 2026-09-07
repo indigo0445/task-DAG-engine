@@ -9,7 +9,7 @@
 #include <mutex>
 #include <functional>
 #include <stdexcept>
-#include <initializer_list>
+#include <vector>
 
 class ThreadPoolExe {
 private:
@@ -72,15 +72,16 @@ public:
         std::cout << "Running on " << num_threads << " hardware threads\n";
     }
 
-    void compute_DAG(std::initializer_list<TaskNode*> sources) {
-        DAGUtil::check_validity(sources);
+    void compute_DAG(std::vector<std::reference_wrapper<TaskNode>> sources) {
+        // takes in references for convenience, to avoid typing &
+        auto sources_ptrs = sources | std::views::transform([](TaskNode& source){ return &source; })
+                                    | std::ranges::to<std::vector<TaskNode*>>();
 
-        num_nodes_left = DAGUtil::get_size(sources);
-        node_q.push_range(sources);
+        DAGUtil::check_validity(sources_ptrs);
+        num_nodes_left = DAGUtil::get_size(sources_ptrs);
+        node_q.push_range(sources_ptrs);
         
-        for (int i = 0; i < sources.size(); i++) {
-            new_task.release();
-        }
+        new_task.release(sources.size());
     }
 
     void wait() {
