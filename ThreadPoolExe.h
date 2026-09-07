@@ -9,13 +9,14 @@
 #include <mutex>
 #include <functional>
 #include <stdexcept>
+#include <initializer_list>
 
 class ThreadPoolExe {
 private:
     int num_threads;
     std::atomic<int> num_nodes_left;
     std::unique_ptr<std::jthread[]> pool;
-    std::counting_semaphore<32> new_task{0}; // releases whenever new item in q
+    std::counting_semaphore<1000> new_task{0}; // releases whenever new item in q
     std::queue<TaskNode*> node_q; // todo: some better q scheduling?
     std::mutex q_mtx;
     std::binary_semaphore all_completed{0};
@@ -35,6 +36,7 @@ private:
                 try {
                     node->task();
                     num_nodes_left--;
+                    // if truly done, successor loop below shouldn't affect q
                     if (num_nodes_left == 0) {
                         all_completed.release();
                     }
@@ -70,18 +72,16 @@ public:
         std::cout << "Running on " << num_threads << " hardware threads\n";
     }
 
-    void compute_DAG(TaskNode&& init) {
-        // allow multiple roots?
+    void compute_DAG(std::initializer_list<TaskNode*> sources) {
+        DAGUtil::check_validity(sources);
 
-        num_nodes_left = DAGUtil::get_size(&init);
-        node_q.push(&init);
-        new_task.release();
-
+        num_nodes_left = DAGUtil::get_size(sources);
+        node_q.push_range(sources);
+        
+        for (int i = 0; i < sources.size(); i++) {
+            new_task.release();
+        }
         all_completed.acquire();
-    }
-
-    void compute_DAG(TaskNode& init) {
-        compute_DAG(std::move(init));
     }
 
     void stop_workers() {
