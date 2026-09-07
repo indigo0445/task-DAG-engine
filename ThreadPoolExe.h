@@ -81,6 +81,9 @@ public:
         for (int i = 0; i < sources.size(); i++) {
             new_task.release();
         }
+    }
+
+    void wait() {
         all_completed.acquire();
     }
 
