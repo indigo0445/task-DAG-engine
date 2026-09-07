@@ -3,8 +3,10 @@
 #include <thread>
 #include <memory>
 #include "TaskNode.h"
+#include "DAGUtil.h"
 #include <iostream>
 #include <queue>
+#include <mutex>
 #include <functional>
 #include <stdexcept>
 
@@ -13,7 +15,7 @@ private:
     int num_threads;
     std::atomic<int> num_nodes_left;
     std::unique_ptr<std::jthread[]> pool;
-    std::counting_semaphore<32> new_task{0}; // sets to 1 whenever new item in q
+    std::counting_semaphore<32> new_task{0}; // releases whenever new item in q
     std::queue<TaskNode*> node_q; // todo: some better q scheduling?
     std::mutex q_mtx;
     std::binary_semaphore all_completed{0};
@@ -68,15 +70,18 @@ public:
         std::cout << "Running on " << num_threads << " hardware threads\n";
     }
 
-    void compute_DAG(int total_nodes, TaskNode &init) {
-        // allow rvalue as well?
+    void compute_DAG(TaskNode&& init) {
         // allow multiple roots?
-        
-        num_nodes_left = total_nodes;
+
+        num_nodes_left = DAGUtil::get_size(&init);
         node_q.push(&init);
         new_task.release();
 
         all_completed.acquire();
+    }
+
+    void compute_DAG(TaskNode& init) {
+        compute_DAG(std::move(init));
     }
 
     void stop_workers() {

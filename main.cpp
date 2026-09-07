@@ -1,4 +1,7 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <syncstream>
+#include <vector>
+#include <numeric>
 #include "TaskNode.h"
 #include "ThreadPoolExe.h"
 
@@ -15,16 +18,16 @@ int main() {
     
     TaskNode n2([vec, sz]() {
        *sz = vec->size(); 
-       std::cout << "len: " << *sz << '\n';
+       std::osyncstream(std::cout) << "len: " << *sz << '\n';
     });
 
     TaskNode n3([vec, sum]() {
        *sum = std::accumulate(vec->begin(), vec->end(), 0); 
-       std::cout << "sum: " << *sum << '\n';
+       std::osyncstream(std::cout) << "sum: " << *sum << '\n';
     });
 
     TaskNode n4([sum, sz]() {
-       std::cout << "sum * len: " << (*sum) * (*sz) << '\n';
+        std::osyncstream(std::cout) << "sum * len: " << (*sum) * (*sz) << '\n';
     });
 
     n1.directs_to(n2);
@@ -33,7 +36,7 @@ int main() {
     n3.directs_to(n4);
 
     ThreadPoolExe exe;
-    exe.compute_DAG(3, n1);
+    exe.compute_DAG(n1);
 
-    std::cout << "main exited\n";
+    exe.stop_workers();
 }
