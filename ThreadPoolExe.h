@@ -12,16 +12,18 @@ class ThreadPoolExe {
 private:
     int num_threads;
     std::atomic<int> num_nodes_left;
-    // std::unique_ptr<std::jthread[]> pool; // don't even need to track threads
+    std::unique_ptr<std::jthread[]> pool;
     std::counting_semaphore<32> new_task{0}; // sets to 1 whenever new item in q
     std::queue<TaskNode*> node_q; // todo: some better q scheduling?
     std::mutex q_mtx;
     std::binary_semaphore all_completed{0};
-
-    std::queue<std::jthread> workers;
+    bool stopping;
 
     void worker_loop() {
         while (true) {
+            if (stopping) {
+                return;
+            }
             std::unique_lock<std::mutex> lock(q_mtx);
             if (!node_q.empty()) {
                 auto node = node_q.front();
@@ -58,9 +60,10 @@ private:
 public:
     ThreadPoolExe() {
         num_threads = std::thread::hardware_concurrency();
-        // pool = std::make_unique<std::jthread[]>(num_threads); // fills w/ default constructor
+        stopping = false;
+        pool = std::make_unique<std::jthread[]>(num_threads); // fills w/ default constructor
         for (int i = 0; i < num_threads; i++) {
-            workers.push(std::jthread(&ThreadPoolExe::worker_loop, this));
+            pool[i] = std::jthread(&ThreadPoolExe::worker_loop, this);
         }
         std::cout << "Running on " << num_threads << " hardware threads\n";
     }
@@ -74,5 +77,12 @@ public:
         new_task.release();
 
         all_completed.acquire();
+    }
+
+    void stop_workers() {
+        stopping = true;
+        for (int i = 0; i < num_threads; i++) {
+            new_task.release();
+        }
     }
 };
