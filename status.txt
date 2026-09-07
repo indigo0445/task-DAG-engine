@@ -1,0 +1,4 @@
+focus only on int inputs/outputs for now, convert to generic later
+    - could consider vector of std::any?
+    - problem with vectors is, client will need to reference v[i]
+learn the diff memory models and utilize them
