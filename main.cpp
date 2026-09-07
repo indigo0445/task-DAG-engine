@@ -41,11 +41,9 @@ int main() {
         std::osyncstream(std::cout) << "sum * median: " << sum * median << '\n';
     }, {n2, n3});
 
-    n4.del_deps(n2);
-    n4.del_deps(n3);
 
     ThreadPoolExe exe;
-    exe.compute_DAG({n1, n4});
+    exe.compute_DAG(n1);
     exe.wait();
 
     exe.stop_workers();

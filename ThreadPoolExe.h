@@ -72,6 +72,10 @@ public:
         std::cout << "Running on " << num_threads << " hardware threads\n";
     }
 
+    void compute_DAG(TaskNode& source) {
+        compute_DAG(std::vector<std::reference_wrapper<TaskNode>>{source});
+    }
+
     void compute_DAG(std::vector<std::reference_wrapper<TaskNode>> sources) {
         // takes in references for convenience, to avoid typing &
         auto sources_ptrs = sources | std::views::transform([](TaskNode& source){ return &source; })

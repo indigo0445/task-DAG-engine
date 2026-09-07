@@ -43,6 +43,14 @@ struct TaskNode {
         std::for_each(succs.begin(), succs.end(), [this](auto& succ){ return directs_to(succ); });
     }
 
+    void add_deps(TaskNode& dep) {
+        dep.directs_to(*this);
+    }
+
+    void add_deps(std::vector<std::reference_wrapper<TaskNode>> deps) {
+        std::for_each(deps.begin(), deps.end(), [this](auto& dep){ return add_deps(dep); });
+    }
+
     void del_successors(TaskNode& succ) {
         // if not directed, do nothing (could consider throwing an error?)
         if (!successors.contains(&succ)) {
