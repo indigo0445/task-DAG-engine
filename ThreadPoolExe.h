@@ -35,13 +35,14 @@ private:
 
                 try {
                     node->task();
-                    num_nodes_left--;
-                    // if truly done, successor loop below shouldn't affect q
-                    if (num_nodes_left == 0) {
-                        all_completed.release();
-                    }
                 } catch (const std::runtime_error& e) {
-                    std::cout << "a task failed\n";
+                    std::cout << "A task failed\n";
+                }
+
+                num_nodes_left--;
+                // if truly done, successor loop below shouldn't affect q
+                if (num_nodes_left == 0) {
+                    all_completed.release();
                 }
 
                 // update successors and see if any are ready
@@ -81,6 +82,7 @@ public:
         auto sources_ptrs = sources | std::views::transform([](TaskNode& source){ return &source; })
                                     | std::ranges::to<std::vector<TaskNode*>>();
 
+        DAGUtil::reset_graph_state(sources_ptrs);
         DAGUtil::check_validity(sources_ptrs);
         num_nodes_left = DAGUtil::get_size(sources_ptrs);
         node_q.push_range(sources_ptrs);

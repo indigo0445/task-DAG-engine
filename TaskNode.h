@@ -10,6 +10,7 @@
 struct TaskNode {
     // operate entirely on internal obj states
     std::function<void()> task;
+    std::atomic<int> total_deps{0}; // for reusability
     std::atomic<int> pending_deps{0};
     std::unordered_set<TaskNode*> successors; // immediate children
     
@@ -25,9 +26,7 @@ struct TaskNode {
     template <typename Callable>
     TaskNode (Callable&& c, std::vector<std::reference_wrapper<TaskNode>> deps)
         : task(std::forward<Callable>(c)) {
-            for (TaskNode& dep : deps) {
-                dep.directs_to(*this);
-            }
+            add_deps(deps); // is this hard copy?
         }
 
     void directs_to(TaskNode& succ) {
@@ -36,6 +35,7 @@ struct TaskNode {
             return;
         }
         successors.insert(&succ);
+        succ.total_deps++;
         succ.pending_deps++;
     }
 
@@ -57,6 +57,7 @@ struct TaskNode {
             return;
         }
         successors.erase(&succ);
+        succ.total_deps--;
         succ.pending_deps--;
     }
 
@@ -70,5 +71,9 @@ struct TaskNode {
 
     void del_deps(std::vector<std::reference_wrapper<TaskNode>> deps) {
         std::for_each(deps.begin(), deps.end(), [this](auto& dep){ return del_deps(dep); });
+    }
+
+    void reset_pending_deps() {
+        pending_deps = total_deps.load();
     }
 };

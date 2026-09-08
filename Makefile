@@ -1,6 +1,6 @@
 main:
-	g++ -std=c++23 -Wall -Wextra -g *.cpp && ./a.out
+	g++ -std=c++23 -Wall -Wextra -g main.cpp && ./a.out
 build:
-	g++ -std=c++23 *.cpp
+	g++ -std=c++23 main.cpp
 run:
 	./a.out

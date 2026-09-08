@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+namespace ranges = std::ranges;
+
 namespace DAGUtil {
     namespace {
         inline void get_descendants(TaskNode* n, std::unordered_set<TaskNode*>& descs) {
@@ -41,8 +43,30 @@ namespace DAGUtil {
     }
 
     namespace {
+        inline void reset_graph_state_DFS(std::unordered_set<TaskNode*>& visited,
+                                          TaskNode* n) {
+            if (visited.contains(n)) {
+                return;
+            }
+            
+            visited.insert(n);
+            for (auto succ : n->successors) {
+                reset_graph_state_DFS(visited, succ);
+            }
+        }
+    }
+
+    inline void reset_graph_state(std::vector<TaskNode*>& sources) {
+        // resets pending_deps counter on all nodes
+        std::unordered_set<TaskNode*> visited;
+        ranges::for_each(sources, [&visited](const auto& source) {
+            reset_graph_state_DFS(visited, source);
+        });
+    }
+
+    namespace {
         inline bool check_cycle_DFS(std::unordered_set<TaskNode*>& node_path,
-                                    std::unordered_set<TaskNode*> verified_no_cycle,
+                                    std::unordered_set<TaskNode*>& verified_no_cycle,
                                     TaskNode* n) {
             if (verified_no_cycle.contains(n)) {
                 return false;
@@ -67,17 +91,18 @@ namespace DAGUtil {
     inline bool check_cycle(std::vector<TaskNode*>& sources) {
         // returns true if HAS cycle
         // DFS to see if any paths loop back to itself; hard to monitor w/ BFS
+        // could consider switching to Kahn's alg
         std::unordered_set<TaskNode*> node_path;
         std::unordered_set<TaskNode*> verified_no_cycle; // starting at node (reached from root), no cycle
         
-        return std::ranges::any_of(sources, [&](auto source) {
+        return ranges::any_of(sources, [&](auto source) {
             return check_cycle_DFS(node_path, verified_no_cycle, source);
         });
     }
 
     inline bool check_validity(std::vector<TaskNode*>& sources) {
         // verify all sources have no deps
-        if (std::ranges::any_of(sources, [](TaskNode* source){ return source->pending_deps != 0; })) {
+        if (ranges::any_of(sources, [](TaskNode* source){ return source->pending_deps != 0; })) {
             throw std::invalid_argument("Invalid source: A provided source's in-degree is not 0; sources should not have dependencies");
             return false;
         }
@@ -87,6 +112,8 @@ namespace DAGUtil {
             throw std::invalid_argument("Not a DAG: Contains cycle");
             return false;
         }
+
+        // could possibly check for pending_deps == total_deps?
 
         // add more later
         return true;

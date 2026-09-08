@@ -37,7 +37,7 @@ int main() {
         std::osyncstream(std::cout) << "sum: " << sum << '\n';
     }, n1);
 
-    TaskNode n4([median, sum]() {
+    TaskNode n4([&median, &sum]() {
         std::osyncstream(std::cout) << "sum * median: " << sum * median << '\n';
     }, {n2, n3});
 
