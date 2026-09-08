@@ -8,7 +8,7 @@ namespace ranges = std::ranges;
 
 namespace DAGUtil {
     namespace {
-        inline void get_descendants(TaskNode* n, std::unordered_set<TaskNode*>& descs) {
+        inline void get_descendants(const TaskNode* n, std::unordered_set<const TaskNode*>& descs) {
             for (auto succ : n->successors) {
                 if (descs.contains(succ)) {
                     continue;
@@ -19,22 +19,22 @@ namespace DAGUtil {
         }
     }
 
-    inline std::unordered_set<TaskNode*> get_descendants(TaskNode* n) {
-        std::unordered_set<TaskNode*> descs = {n};
+    inline std::unordered_set<const TaskNode*> get_descendants(const TaskNode* n) {
+        std::unordered_set<const TaskNode*> descs = {n};
         get_descendants(n, descs);
         return descs;
     }
 
     // are these move semantics efficient?
-    inline std::unordered_set<TaskNode*> get_descendants(std::vector<TaskNode*>& sources) {
-        std::unordered_set<TaskNode*> descs(sources.begin(), sources.end());
+    inline std::unordered_set<const TaskNode*> get_descendants(std::vector<TaskNode*>& sources) {
+        std::unordered_set<const TaskNode*> descs(sources.begin(), sources.end());
         for (auto source : sources) {
             get_descendants(source, descs);
         }
         return descs;
     }
 
-    inline int get_size(TaskNode* n) {
+    inline int get_size(const TaskNode* n) {
         return get_descendants(n).size();
     }
 
@@ -127,7 +127,7 @@ namespace DAGUtil {
 
     inline bool check_validity(std::vector<TaskNode*>& sources) {
         // verify all sources have no deps
-        if (ranges::any_of(sources, [](TaskNode* source){ return source->pending_deps != 0; })) {
+        if (ranges::any_of(sources, [](const TaskNode* source){ return source->pending_deps != 0; })) {
             throw std::invalid_argument("Invalid source: A provided source's in-degree is not 0; sources should not have dependencies");
             return false;
         }

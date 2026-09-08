@@ -11,13 +11,19 @@
 #include <stdexcept>
 #include <vector>
 
+struct CompareNodes {
+    bool operator()(const TaskNode* n1, const TaskNode* n2) {
+        return DAGUtil::get_size(n1) < DAGUtil::get_size(n2);
+    }
+};
+
 class ThreadPoolExe {
 private:
     int num_threads;
     std::atomic<int> num_nodes_left;
     std::unique_ptr<std::jthread[]> pool;
     std::counting_semaphore<1000> new_task{0}; // releases whenever new item in q
-    std::queue<TaskNode*> node_q; // todo: some better q scheduling?
+    std::priority_queue<TaskNode*, std::vector<TaskNode*>, CompareNodes> node_q;
     std::mutex q_mtx;
     std::binary_semaphore all_completed{0};
     bool stopping;
@@ -29,7 +35,7 @@ private:
             }
             std::unique_lock<std::mutex> lock(q_mtx);
             if (!node_q.empty()) {
-                auto node = node_q.front();
+                auto node = node_q.top();
                 node_q.pop();
                 lock.unlock();
 
