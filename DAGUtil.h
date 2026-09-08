@@ -50,9 +50,9 @@ namespace DAGUtil {
             }
             
             visited.insert(n);
-            for (auto succ : n->successors) {
+            ranges::for_each(n->successors, [&visited](const auto& succ) {
                 reset_graph_state_DFS(visited, succ);
-            }
+            });
         }
     }
 
@@ -61,6 +61,31 @@ namespace DAGUtil {
         std::unordered_set<TaskNode*> visited;
         ranges::for_each(sources, [&visited](const auto& source) {
             reset_graph_state_DFS(visited, source);
+        });
+    }
+
+    namespace {
+        inline bool graph_any_of_DFS(std::unordered_set<TaskNode*>& visited,
+                                     std::function<bool(TaskNode*)> pred, TaskNode* n) {
+            if (visited.contains(n)) {
+                return false;
+            }
+            if (pred(n)) {
+                return true;
+            }
+
+            visited.insert(n);
+            return ranges::any_of(n->successors, [&](const auto& succ) {
+                return graph_any_of_DFS(visited, pred, succ);
+            });
+        }
+    }
+
+    inline bool graph_any_of(std::vector<TaskNode*>& sources, std::function<bool(TaskNode*)> pred) {
+        // checks if pred is true for any of DAG
+        std::unordered_set<TaskNode*> visited;
+        return ranges::any_of(sources, [&](const auto& source) {
+            return graph_any_of_DFS(visited, pred, source);
         });
     }
 
@@ -113,7 +138,12 @@ namespace DAGUtil {
             return false;
         }
 
-        // could possibly check for pending_deps == total_deps?
+        // check for pending_deps == total_deps?
+        if (graph_any_of(sources, [](const TaskNode* n){ return n->pending_deps != n->total_deps; })) {
+            throw std::invalid_argument("Graph is not reset; Consider calling reset_graph_state");
+            return false;
+        }
+
 
         // add more later
         return true;
