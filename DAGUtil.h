@@ -8,38 +8,63 @@ namespace ranges = std::ranges;
 
 namespace DAGUtil {
     namespace {
-        inline void get_descendants(const TaskNode* n, std::unordered_set<const TaskNode*>& descs) {
+        // descs holds all visited descendants of sources
+        inline void get_descendants_DFS(const TaskNode* n, std::unordered_set<const TaskNode*>& descs) {
             for (auto succ : n->successors) {
                 if (descs.contains(succ)) {
                     continue;
                 }
                 descs.insert(succ);
-                get_descendants(succ, descs);
+                get_descendants_DFS(succ, descs);
             }
         }
     }
 
     inline std::unordered_set<const TaskNode*> get_descendants(const TaskNode* n) {
         std::unordered_set<const TaskNode*> descs = {n};
-        get_descendants(n, descs);
+        get_descendants_DFS(n, descs);
         return descs;
     }
 
     // are these move semantics efficient?
     inline std::unordered_set<const TaskNode*> get_descendants(std::vector<TaskNode*>& sources) {
         std::unordered_set<const TaskNode*> descs(sources.begin(), sources.end());
-        for (auto source : sources) {
-            get_descendants(source, descs);
-        }
+        ranges::for_each(sources, [&](const auto& source) {
+            get_descendants_DFS(source, descs);
+        });
         return descs;
     }
 
-    inline int get_size(const TaskNode* n) {
-        return get_descendants(n).size();
+    namespace {
+        // also updates all subgraph size caches in TaskNodes
+        inline int get_size_DFS(std::unordered_map<TaskNode*, int>& visited_cache, TaskNode* n) {
+            if (visited_cache.contains(n)) {
+                return visited_cache[n];
+            }
+            // assume valid DAG, so won't loop back while DFS; won't update visited here
+            auto sizes = n->successors | std::views::transform([&](TaskNode* succ) {
+                return get_size_DFS(visited_cache, succ);
+            });
+            auto size = std::accumulate(sizes.begin(), sizes.end(), 0);
+            visited_cache[n] = size;
+            n->subgraph_size = size;
+            return size;
+        }
+    }
+
+    inline int get_size(TaskNode* n) {
+        std::unordered_map<TaskNode*, int> visited_cache;
+        return get_size_DFS(visited_cache, n);
     }
 
     inline int get_size(std::vector<TaskNode*>& sources) {
-        return get_descendants(sources).size();
+        std::unordered_map<TaskNode*, int> visited_cache;
+
+        ranges::for_each(sources, [&visited_cache](auto& source) {
+            // result unused since sum of these will overcount
+            get_size_DFS(visited_cache, source);
+        });
+        return visited_cache.size();
     }
 
     namespace {

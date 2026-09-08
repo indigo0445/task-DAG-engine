@@ -6,12 +6,14 @@
 #include <memory>
 #include <atomic>
 #include <vector>
+#include <optional>
 
 struct TaskNode {
     // operate entirely on internal obj states
     std::function<void()> task;
     std::atomic<int> total_deps{0}; // for reusability
     std::atomic<int> pending_deps{0};
+    int subgraph_size; // cache the size for pqueue comparator
     std::unordered_set<TaskNode*> successors; // immediate children
     
     template <typename Callable>

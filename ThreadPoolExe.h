@@ -13,7 +13,8 @@
 
 struct CompareNodes {
     bool operator()(const TaskNode* n1, const TaskNode* n2) {
-        return DAGUtil::get_size(n1) < DAGUtil::get_size(n2);
+        // compare cached sizes
+        return n1->subgraph_size < n2->subgraph_size;
     }
 };
 
@@ -76,7 +77,7 @@ public:
         for (int i = 0; i < num_threads; i++) {
             pool[i] = std::jthread(&ThreadPoolExe::worker_loop, this);
         }
-        std::cout << "Running on " << num_threads << " hardware threads\n";
+        std::cout << "Will run on " << num_threads << " hardware threads\n";
     }
 
     void compute_DAG(TaskNode& source) {
@@ -90,8 +91,10 @@ public:
 
         DAGUtil::reset_graph_state(sources_ptrs);
         DAGUtil::check_validity(sources_ptrs);
-        num_nodes_left = DAGUtil::get_size(sources_ptrs);
         node_q.push_range(sources_ptrs);
+        num_nodes_left = DAGUtil::get_size(sources_ptrs);
+        
+        std::cout << "Running task DAG with " << num_nodes_left << " nodes\n";
         
         new_task.release(sources.size());
     }
