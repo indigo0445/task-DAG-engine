@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <stdexcept>
+#include <numeric>
 
 namespace ranges = std::ranges;
 
@@ -75,6 +76,7 @@ namespace DAGUtil {
             }
             
             visited.insert(n);
+            n->reset_pending_deps();
             ranges::for_each(n->successors, [&visited](const auto& succ) {
                 reset_graph_state_DFS(visited, succ);
             });
@@ -172,11 +174,5 @@ namespace DAGUtil {
 
         // add more later
         return true;
-    }
-
-
-    inline void check_performance() {
-        // creates large tests and prints timing benchmraks
-
     }
 }
